@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Teams & Auth ──────────────────────────────────────────────
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  TeamMember[]
+  projects Project[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  email     String
+  name      String   @default("")
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@unique([teamId, email])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  teamId      String
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  scopes      String[]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  createdBy   String
+
+  @@index([teamId])
+  @@map("api_keys")
+}
+
+// ── Projects ──────────────────────────────────────────────────
+
+model Project {
+  id                   String   @id @default(cuid())
+  teamId               String?
+  name                 String
+  slug                 String   @unique
+  apiKey               String   @unique
+  githubRepoUrl        String?
+  githubInstallationId String?
+  settings             Json     @default("{}")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  team         Team?            @relation(fields: [teamId], references: [id])
+  traces       ApiTrace[]
+  endpoints    ApiEndpoint[]
+  uiEvents     UiEvent[]
+  analyses     AnalysisResult[]
+  codeReviews  CodeReview[]
+  testCases    TestCase[]
+  alertRules   AlertRule[]
+  alertEvents  AlertEvent[]
+  reports      Report[]
+  slaRecords   SlaRecord[]
+
+  @@index([teamId])
+  @@map("projects")
+}
+
+// ── API Tracing ───────────────────────────────────────────────
+
+model ApiTrace {
+  id              String   @id @default(cuid())
+  projectId       String
+  traceId         String
+  spanId          String
+  parentSpanId    String?
+  method          String
+  url             String
+  path            String
+  statusCode      Int
+  requestHeaders  Json     @default("{}")
+  requestBody     Json?
+  responseHeaders Json     @default("{}")
+  responseBody    Json?
+  durationMs      Int
+  environment     String
+  serviceId       String
+  tags            String[]
+  timestamp       DateTime
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, timestamp(sort: Desc)])
+  @@index([projectId, path, method])
+  @@index([traceId])
+  @@map("api_traces")
+}
+
+model ApiEndpoint {
+  id           String   @id @default(cuid())
+  projectId    String
+  method       String
+  path         String
+  firstSeen    DateTime
+  lastSeen     DateTime
+  totalCalls   Int      @default(0)
+  successRate  Float    @default(1.0)
+  errorRate    Float    @default(0.0)
+  p50LatencyMs Int      @default(0)
+  p95LatencyMs Int      @default(0)
+  p99LatencyMs Int      @default(0)
+  openApiSpec  Json?
+  healthScore  Int      @default(100)
+  healthStatus String   @default("healthy")
+  trend        String   @default("stable")
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, method, path])
+  @@index([projectId, healthScore])
+  @@map("api_endpoints")
+}
+
+model UiEvent {
+  id         String   @id @default(cuid())
+  projectId  String
+  sessionId  String
+  userId     String?
+  type       String
+  element    String?
+  url        String
+  referrer   String?
+  metadata   Json     @default("{}")
+  timestamp  DateTime
+  durationMs Int?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, timestamp(sort: Desc)])
+  @@index([projectId, sessionId])
+  @@map("ui_events")
+}
+
+// ── Analysis ──────────────────────────────────────────────────
+
+model AnalysisResult {
+  id              String    @id @default(cuid())
+  projectId       String
+  type            String
+  status          String    @default("pending")
+  input           Json      @default("{}")
+  output          Json?
+  summary         String    @default("")
+  severity        String?
+  relatedEntityId String?
+  errorMessage    String?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type, status])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@map("analysis_results")
+}
+
+model CodeReview {
+  id          String   @id @default(cuid())
+  projectId   String
+  provider    String   @default("github") // github | azure_devops | bitbucket
+  prNumber    Int
+  prUrl       String
+  prTitle     String
+  prAuthor    String   @default("")
+  baseBranch  String   @default("main")
+  headBranch  String   @default("")
+  diffSummary String   @default("")
+  riskScore   Int      @default(0)
+  status      String   @default("pending")
+  analysisId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, prNumber])
+  @@index([projectId, status])
+  @@map("code_reviews")
+}
+
+model TestCase {
+  id                String    @id @default(cuid())
+  projectId         String
+  endpointId        String?
+  name              String
+  description       String    @default("")
+  type              String
+  framework         String
+  code              String
+  status            String    @default("pending")
+  lastRunAt         DateTime?
+  lastRunDurationMs Int?
+  sourceTraceId     String?
+  sourceAnalysisId  String?
+  createdAt         DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@map("test_cases")
+}
+
+// ── Alerts ────────────────────────────────────────────────────
+
+model AlertRule {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  description String   @default("")
+  type        String
+  condition   Json
+  severity    String
+  enabled     Boolean  @default(true)
+  channels    Json     @default("[]")
+  createdAt   DateTime @default(now())
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  alertEvents AlertEvent[]
+
+  @@index([projectId, enabled])
+  @@map("alert_rules")
+}
+
+model AlertEvent {
+  id          String    @id @default(cuid())
+  projectId   String
+  ruleId      String
+  triggeredAt DateTime  @default(now())
+  resolvedAt  DateTime?
+  message     String
+  severity    String
+  metadata    Json      @default("{}")
+  notified    Boolean   @default(false)
+
+  project Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rule    AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, triggeredAt(sort: Desc)])
+  @@index([ruleId])
+  @@map("alert_events")
+}
+
+// ── SLA Tracking ──────────────────────────────────────────────
+
+model SlaRecord {
+  id                String   @id @default(cuid())
+  projectId         String
+  period            String
+  periodStart       DateTime
+  periodEnd         DateTime
+  uptimePercent     Float
+  p99LatencyMs      Int
+  errorRate         Float
+  totalRequests     Int
+  incidentCount     Int      @default(0)
+  totalDowntimeMs   Int      @default(0)
+  slaTarget         Float    @default(99.9)
+  slaAchieved       Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, periodStart(sort: Desc)])
+  @@map("sla_records")
+}
+
+// ── Reports ───────────────────────────────────────────────────
+
+model Report {
+  id        String   @id @default(cuid())
+  projectId String
+  type      String
+  title     String
+  period    Json
+  sections  Json     @default("[]")
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@map("reports")
+}

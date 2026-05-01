@@ -1,0 +1,188 @@
+# Global image settings
+image:
+  registry: ghcr.io/kyntra
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -- Collector --------------------------------------------------------------
+collector:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: kyntra/collector
+  service:
+    type: ClusterIP
+    port: 3001
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+
+# -- Analyzer ---------------------------------------------------------------
+analyzer:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: kyntra/analyzer
+  service:
+    type: ClusterIP
+    port: 3002
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
+
+# -- Gateway ----------------------------------------------------------------
+gateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: kyntra/gateway
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# -- Dashboard --------------------------------------------------------------
+dashboard:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: kyntra/dashboard
+  service:
+    type: ClusterIP
+    port: 3003
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# -- Ingress ----------------------------------------------------------------
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: kyntra.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: dashboard
+    - host: api.kyntra.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: gateway
+    - host: collector.kyntra.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: collector
+  tls:
+    - secretName: kyntra-tls
+      hosts:
+        - kyntra.example.com
+        - api.kyntra.example.com
+        - collector.kyntra.example.com
+
+# -- PostgreSQL -------------------------------------------------------------
+postgresql:
+  enabled: true
+  auth:
+    username: kyntra
+    password: kyntra_password
+    database: kyntra
+  primary:
+    persistence:
+      enabled: true
+      size: 50Gi
+  image:
+    tag: "16"
+
+# -- Redis ------------------------------------------------------------------
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# -- Secrets ----------------------------------------------------------------
+secrets:
+  # Set these values or use existingSecret
+  anthropicApiKey: ""
+  jwtSecret: ""
+  existingSecret: ""  # Name of existing k8s secret
+
+# -- Configuration ----------------------------------------------------------
+config:
+  logLevel: info
+  dashboardUrl: ""
+  slackWebhookUrl: ""
+  pagerdutyIntegrationKey: ""
+  teamsWebhookUrl: ""
+  # GitHub App
+  githubAppId: ""
+  githubWebhookSecret: ""
+  # Azure DevOps
+  azureDevopsWebhookToken: ""
+  # Bitbucket
+  bitbucketWebhookSecret: ""
+
+# -- Service Account --------------------------------------------------------
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# -- Pod Security -----------------------------------------------------------
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Pod Disruption Budget --------------------------------------------------
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

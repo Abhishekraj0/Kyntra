@@ -1,0 +1,28 @@
+{
+  "name": "@kyntra/mcp-server",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-or-later",
+  "description": "Kyntra MCP (Model Context Protocol) server \u2014 query your engineering intelligence from any AI assistant",
+  "type": "module",
+  "bin": {
+    "kyntra-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@kyntra/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}

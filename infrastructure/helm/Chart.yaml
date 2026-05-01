@@ -1,0 +1,26 @@
+apiVersion: v2
+name: kyntra
+description: AI-native full-stack engineering intelligence platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - observability
+  - ai
+  - api-monitoring
+  - code-review
+home: https://github.com/kyntra/kyntra
+sources:
+  - https://github.com/kyntra/kyntra
+maintainers:
+  - name: Kyntra Contributors
+    url: https://github.com/kyntra/kyntra
+dependencies:
+  - name: postgresql
+    version: "13.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "18.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

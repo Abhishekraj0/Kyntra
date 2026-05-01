@@ -1,0 +1,34 @@
+{
+  "name": "kyntra",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "description": "AI-native full-stack engineering intelligence platform",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:migrate": "pnpm --filter=@kyntra/collector prisma migrate dev",
+    "db:generate": "pnpm --filter=@kyntra/collector prisma generate",
+    "db:seed": "pnpm --filter=@kyntra/collector prisma db seed",
+    "db:studio": "pnpm --filter=@kyntra/collector prisma studio",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.3",
+    "prettier": "^3.2.5",
+    "eslint": "^8.57.0"
+  },
+  "packageManager": "pnpm@9.1.0"
+}

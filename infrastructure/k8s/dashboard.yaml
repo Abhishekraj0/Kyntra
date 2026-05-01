@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kyntra-dashboard
+  namespace: kyntra
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+      - name: dashboard
+        image: kyntra/dashboard:latest
+        ports:
+        - containerPort: 3003
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          value: "https://api.kyntra.io"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3003
+          initialDelaySeconds: 15
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kyntra-dashboard
+  namespace: kyntra
+spec:
+  selector:
+    app: dashboard
+  ports:
+  - port: 3003
+    targetPort: 3003

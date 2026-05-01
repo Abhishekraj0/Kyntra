@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kyntra.fullname" . }}-config
+  labels:
+    {{- include "kyntra.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  COLLECTOR_URL: {{ printf "http://%s-collector:%d" (include "kyntra.fullname" .) (.Values.collector.service.port | int) | quote }}
+  ANALYZER_URL: {{ printf "http://%s-analyzer:%d" (include "kyntra.fullname" .) (.Values.analyzer.service.port | int) | quote }}
+  GATEWAY_URL: {{ printf "http://%s-gateway:%d" (include "kyntra.fullname" .) (.Values.gateway.service.port | int) | quote }}
+  DASHBOARD_URL: {{ .Values.config.dashboardUrl | quote }}
+  SLACK_WEBHOOK_URL: {{ .Values.config.slackWebhookUrl | quote }}
+  PAGERDUTY_INTEGRATION_KEY: {{ .Values.config.pagerdutyIntegrationKey | quote }}
+  TEAMS_WEBHOOK_URL: {{ .Values.config.teamsWebhookUrl | quote }}
+  GITHUB_APP_ID: {{ .Values.config.githubAppId | quote }}
+  GITHUB_WEBHOOK_SECRET: {{ .Values.config.githubWebhookSecret | quote }}
+  DATABASE_URL: {{ include "kyntra.databaseUrl" . | quote }}
+  REDIS_URL: {{ include "kyntra.redisUrl" . | quote }}
